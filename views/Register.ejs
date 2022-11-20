@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <link rel="stylesheet" href="css/style.css" />
+    <title>Register</title>
+  </head>
+  <body>
+    <div class="login-wrapper">
+      <form id="register-form" class="form">
+        <h2>Register</h2>
+        <div class="input-group">
+          <input type="text" name="username" id="username" required />
+          <label for="username">Name</label>
+        </div>
+        <div class="input-group">
+            <input type="text" name="email" id="email" required />
+            <label for="email">Email</label>
+          </div>
+          <div class="input-group">
+            <input type="tel" name="phonenum" id="phonenum" required />
+            <label for="phonenum">Phone Number</label>
+          </div>
+          <div class="input-group">
+            <input type="date" name="birthday" id="birthday" required />
+            <label for="birthday">Birthday</label>
+          </div>
+        <div class="input-group">
+          <input
+            type="password"
+            name="pass"
+            id="pass"
+            required
+          />
+          <label for="pass">Password</label>
+        </div>
+        <input type="submit" id="signup" name="signup" value="Register" class="submit-btn" />
+      </form>
+    </div>
+
+    <script>
+        const form = document.getElementById('register-form')
+        form.addEventListener('submit', registerUser)
+    
+        async function registerUser(event){
+          event.preventDefault()
+          const username = document.getElementById('username').value
+          const email = document.getElementById('email').value
+          const password = document.getElementById('pass').value
+          const bday = document.getElementById('birthday').value
+          const phonenumber = document.getElementById('phonenum').value
+    
+          const result = await fetch('/signup',{
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              username,
+              email,
+              password,
+              bday,
+              phonenumber
+            })
+          }).then((res) => res.json())
+    
+          console.log(result)
+          if(result.status === 'ok'){
+            //all good
+            alert('Success')
+            window.location.href = '/'
+          }else {
+            alert(result.error)
+          }
+        }
+      </script>
+  </body>
+</html>

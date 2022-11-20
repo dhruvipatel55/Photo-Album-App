@@ -1,0 +1,451 @@
+<script>
+
+  document.onreadystatechange = async function getinfo() {
+    document.getElementById('maincontainer').hidden = true;
+    const result = await fetch('/DisplayInfo', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        token: localStorage.getItem('token')
+      })
+    }).then((res) => res.json())
+
+
+    if (result.status === 'ok') {
+      //all good
+      document.getElementsByName('username').forEach(element => {
+        element.innerHTML = result.data.username
+      });
+
+      document.getElementsByName('bday').forEach(element => {
+        element.innerHTML = result.data.bday
+      });
+
+      document.getElementsByName('email').forEach(element => {
+        element.innerHTML = result.data.email
+      });
+
+      document.getElementsByName('phonenumber').forEach(element => {
+        element.innerHTML = result.data.phonenumber
+      });
+
+    } else {
+      localStorage.removeItem('token')
+      window.location.href = '/'
+    }
+  }
+
+  window.onload = async function () {
+    document.getElementById('maincontainer').hidden = false;
+    fetchAllImages()
+    const form = document.getElementById('addimageform')
+    form.addEventListener('submit', uploadImage)
+
+    const searchb = document.getElementById('searchbar')
+    searchb.addEventListener("keypress", function (event) {
+      if (event.key === "Enter") {
+        searchImage()
+      }
+    })
+  }
+
+  function logout() {
+    localStorage.removeItem('token')
+    window.location.href = '/'
+  }
+
+
+  async function uploadImage(event) {
+    event.preventDefault()
+    console.log('Uploading image ...')
+    const imageNameObj = document.getElementById('imageName')
+    const imageFileObj = document.getElementById('imageFile')
+
+    const formData = new FormData()
+    formData.append("ImageName", imageNameObj.value)
+    for (let i = 0; i < imageFileObj.files.length; i++) {
+      formData.append("files", imageFileObj.files[i])
+    }
+
+    formData.append("token", localStorage.getItem('token'))
+
+    const result = await fetch('/galleryApp/upload', {
+      method: 'POST',
+      body: formData
+    }).then((res) => res.json())
+      .catch((err) => ("Error Occured ", err))
+    imageNameObj.value = null
+    imageFileObj.value = null
+    $('#UploadImageModal').modal('toggle')
+    fetchAllImages()
+  }
+
+  async function fetchAllImages() {
+    const result = await fetch('/GetImages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        token: localStorage.getItem('token')
+      })
+    }).then((res) => res.json())
+    console.log(result)
+    displayImages(result)
+  }
+
+  async function searchImage() {
+    searchString = document.getElementById('searchbar').value
+    console.log(searchString)
+    const result = await fetch('/galleryApp/searchByLabel', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        token: localStorage.getItem('token'),
+        search: searchString
+      })
+    }).then((res) => res.json())
+    document.getElementById('searchbar').value = ""
+    displayImages(result)
+  }
+
+  async function deleteImage(message) {
+    const result = await fetch('/galleryApp/DeleteImage', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        token: localStorage.getItem('token'),
+        imageID: message
+      })
+    }).then((res) => res.json())
+    console.log("Delete: " + message)
+    fetchAllImages()
+  }
+
+  async function changeImage(message) {
+    console.log("Change: " + message)
+    const form = document.getElementById('changeimageform')
+    form.addEventListener('submit', sendChangeMessage)
+    form.message = message
+    //sendChangeMessage(message)
+  }
+
+  
+
+  async function sendChangeMessage(event){
+    event.preventDefault()
+    var message = event.currentTarget.message
+    console.log('sending ID: ' + message)
+    const changeImageFileObj = document.getElementById('ChangedImageFile')
+    const formData = new FormData()
+    for (let i = 0; i < changeImageFileObj.files.length; i++) {
+      formData.append("files", changeImageFileObj.files[i])
+    }
+
+    formData.append("imageIDtoChange", message)
+    formData.append("token", localStorage.getItem('token'))
+
+    const result = await fetch('/galleryApp/changeImage', {
+      method: 'POST',
+      body: formData
+    }).then((res) => res.json())
+      .catch((err) => ("Error Occured ", err))
+    changeImageFileObj.value = null
+    $('#ChangeImageModal').modal('toggle')
+    fetchAllImages()
+  }
+
+  function displayImages(result) {
+
+
+    imageContainer = document.getElementById("imageContainer")
+    imageContainer.classList.add("row")
+    imageContainer.classList.add("row-cols-2")
+    imageContainer.classList.add("d-flex")
+    imageContainer.classList.add("justify-content-center")
+    imageContainer.innerHTML = ""
+    resultArray = result.data
+    try {
+      resultArray.reverse().forEach(function (element) {
+        imageContainer.innerHTML += "<div class=\"col imagebtn\">" + "<img src=\"../userFiles/"
+          + element.imageName + "\" height=\"150px\" width=\"300px\">" + "<div class=\"btn deletebtn\">" + "Image Label: "
+          + element.imageLabel + "<div class=\"row\"><div class=\"col\"><a class=\"btn btn-warning deletebtn\" onclick=\"changeImage('" +
+          element._id + "')\" data-toggle=\"modal\" data-target=\"#ChangeImageModal\"> Change </a></div>" + "<div class=\"col\"><a class=\"btn btn-danger deletebtn\" onclick=\"deleteImage('" +
+          element._id + "')\"> Delete </a>" + "<hr>"
+        console.log(element.imageName)
+      })
+    } catch (error) {
+      imageContainer.innerHTML += "<div class=\"col imagebtn\">" + "<img src=\"../userFiles/"
+        + resultArray.imageName + "\" height=\"150px\" width=\"300px\">" + "<div class=\"btn deletebtn\">" + "Image Label: "
+        + resultArray.imageLabel + "<div class=\"row\"><div class=\"col\"><a class=\"btn btn-warning deletebtn\" onclick=\"changeImage('" +
+        resultArray._id + "')\" data-toggle=\"modal\" data-target=\"#ChangeImageModal\"> Change </a></div>" + "<div class=\"col\"><a class=\"btn btn-danger deletebtn\" onclick=\"deleteImage('" +
+        resultArray._id + "')\"> Delete </a>" + "<hr>"
+    }
+
+  }
+
+
+</script>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+
+<body>
+
+  <link href="https://cdn.lineicons.com/3.0/lineicons.css" rel="stylesheet">
+  <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/boxicons@2.0.7/css/boxicons.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.9.1/font/bootstrap-icons.css">
+  <div class="container" id="maincontainer">
+    <div class="row">
+      <div class="col-12 col-lg-3">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="my-3">Welcome <span name="username"></span></h5>
+            <br>
+            <h6 class="my-3"> Brithday : <span name="bday"></span></h6>
+            <h6 class="my-3"> Phone Number : <span name="phonenumber"></span></h6>
+            <h6 class="my-3"> Email : <span name="email"></span></h6>
+            <div class="fm-menu">
+              <div class="list-group list-group-flush">
+                <div class="list-group-item py-1"> <i><a class="btn btn-success" onclick="logout()">Logout</a> </i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="col-12 col-lg-9">
+        <div class="card" id="DashName">
+          <div class="card-body">
+            <h1>Dashboard for <span name="username"></span></h1>
+          </div>
+        </div>
+        <div class="card" id="TasksContainer">
+          <div class="card-body">
+            <div class="fm-search">
+              <div class="mb-0">
+                <div class="input-group input-group-lg"> <span class="input-group-text bg-transparent"><a class="btn"
+                      id="searchbutton" onclick="searchImage()"><i class="fa fa-search"></i></a></span>
+                  <input id="searchbar" type="text" class="form-control" placeholder="Search Tasks">
+                </div>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <div class="d-inline-flex p-2 bd-highlight">
+
+                <button type="button" class="btn btn-success" data-toggle="modal" data-target="#UploadImageModal">Upload
+                  Image</button>
+                <div class="modal fade" id="UploadImageModal" tabindex="-1" aria-labelledby="UploadImageModal"
+                  aria-hidden="true">
+                  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title" id="AddTaskModalLabel">Upload Image</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                          <span aria-hidden="true">&times;</span>
+                        </button>
+                      </div>
+                      <form id="addimageform">
+                        <div class="modal-body">
+
+                          <div class="input-group mb-3">
+                            <div class="input-group-prepend">
+                              <span class="input-group-text" id="basic-addon1">Required</span>
+                            </div>
+                            <input id="imageName" type="text" class="form-control" placeholder="Image Name" required />
+                          </div>
+                          <div class="input-group mb-3">
+                            <div class="input-group-prepend">
+                              <span class="input-group-text" id="basic-addon1">Required</span>
+                            </div>
+                            <input id="imageFile" type="file" class="form-control" required />
+                          </div>
+                        </div>
+                        <div class="modal-footer">
+                          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                          <button id="uploadImageButton" type="submit" class="btn btn-primary">Upload</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-info" style="margin-left: 25px;" onclick="fetchAllImages()">Display
+                  All Images</button>
+              </div>
+            </div>
+          </div>
+          <div class="container">
+            <div class="container">
+              <div id="imageContainer">
+
+              </div>
+            </div>
+
+            <!--Change Image Modal Start-->
+            <div class="modal fade" id="ChangeImageModal" tabindex="-1" aria-labelledby="ChangeImageModal"
+              aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="AddTaskModalLabel">Change Image</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                  </div>
+                  <form id="changeimageform">
+                    <div class="modal-body">
+                      <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                          <span class="input-group-text" id="basic-addon1">Required</span>
+                        </div>
+                        <input id="ChangedImageFile" type="file" class="form-control" required />
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                      <button id="changeImageButton" type="submit" class="btn btn-primary">Change</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+            <!--Change Image Modal end-->
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <style type="text/css">
+    body {
+      margin-top: 20px;
+      background-color: #f7f7ff;
+    }
+
+    .deletebtn {
+      display: none
+    }
+
+    .imagebtn:hover .deletebtn {
+      display: block
+    }
+
+    .card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      word-wrap: break-word;
+      background-color: #fff;
+      background-clip: border-box;
+      border: 0px solid rgba(0, 0, 0, 0);
+      border-radius: .25rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 6px 0 rgb(218 218 253 / 65%), 0 2px 6px 0 rgb(206 206 238 / 54%);
+    }
+
+    .fm-file-box {
+      font-size: 25px;
+      background: #e9ecef;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: .25rem;
+    }
+
+    .ms-2 {
+      margin-left: .5rem !important;
+    }
+
+    .fm-menu .list-group a {
+      font-size: 16px;
+      color: #5f5f5f;
+      display: flex;
+      align-items: center;
+    }
+
+    .list-group-flush>.list-group-item {
+      border-width: 0 0 1px;
+    }
+
+    .list-group-item+.list-group-item {
+      border-top-width: 0;
+    }
+
+    .py-1 {
+      padding-top: .25rem !important;
+      padding-bottom: .25rem !important;
+    }
+
+    .list-group-item {
+      position: relative;
+      display: block;
+      padding: .5rem 1rem;
+      text-decoration: none;
+      background-color: #fff;
+      border: 1px solid rgba(0, 0, 0, .125);
+    }
+
+    .radius-15 {
+      border-radius: 15px;
+    }
+
+    .fm-icon-box {
+      font-size: 32px;
+      background: #ffffff;
+      width: 52px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: .25rem;
+    }
+
+    .font-24 {
+      font-size: 24px;
+    }
+
+    .ms-auto {
+      margin-left: auto !important;
+    }
+
+    .font-30 {
+      font-size: 30px;
+    }
+
+    .user-groups img {
+      margin-left: -14px;
+      border: 1px solid #e4e4e4;
+      padding: 2px;
+      cursor: pointer;
+    }
+
+    .rounded-circle {
+      border-radius: 50% !important;
+    }
+  </style>
+
+
+</body>
+
+</html>
